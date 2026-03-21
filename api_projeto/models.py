@@ -8,7 +8,7 @@ class TipoUsuario(models.Model):#tipo de usuario criado
     user = models.OneToOneField(User, on_delete=models.CASCADE)#usuario só pode ter um tipo
     tipo = models.CharField(
         choices=[
-            ('usuario', 'Usuário'),
+            ('cliente', 'Cliente'),
             ('prestador', 'Prestador') #opções
         ]
     )
@@ -21,10 +21,47 @@ def criar_perfil(sender, instance,created, **kwargs): #função para criar tipo 
     if created:
         TipoUsuario.objects.create(User= instance)
 
+class Prestador(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)# tabela de prestador que esta ligada ao usario
+    especialidade = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.user.username
+
 class Servico(models.Model):
-    prestador = models.ForeignKey(TipoUsuario, on_delete=models.CASCADE)
+    prestador = models.ForeignKey(Prestador, on_delete=models.CASCADE)
     nome = models.CharField(max_length=50)
     descricao = models.TextField()
     duracao_minutos = models.IntegerField()
-    preco = models.FloatField()
+    preco = models.DecimalField(max_digits=8, decimal_places=2)
     ativo = models.BooleanField()
+
+    def __str__(self):
+        return self.nome
+    
+class DisponibilidadedeHorario(models.Model):
+    prestador = models.ForeignKey(Prestador, on_delete=models.CASCADE, related_name='disponibilidades')
+    dia_semana = models.IntegerField()
+    hora_inicio = models.TimeField()
+    hora_fim = models.TimeField()
+    
+    def __str__(self):
+        return f'{self.prestador} - Dia {self.dia_semana}'
+    
+class Agendamentos(models.Model):
+    cliente = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agendamentos')
+    servico = models.ForeignKey(Servico, on_delete=models.CASCADE)
+    data_hora_inicio = models.DateTimeField()
+    data_hora_fim = models.DateTimeField()
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pendente', 'Pendente'),
+            ('confirmado', 'Confirmado'),
+            ('cancelado', 'Cancelado')
+        ]
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.cliente} - {self.servico}"
