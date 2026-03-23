@@ -5,7 +5,7 @@ from django.dispatch import receiver
 
 
 class TipoUsuario(models.Model):#tipo de usuario criado
-    user = models.OneToOneField(User, on_delete=models.CASCADE)#usuario só pode ter um tipo
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='tipousuario')#usuario só pode ter um tipo
     tipo = models.CharField(
         choices=[
             ('cliente', 'Cliente'),
@@ -17,7 +17,7 @@ class TipoUsuario(models.Model):#tipo de usuario criado
         return self.user.username #retorna username
 
 @receiver(post_save, sender=User)
-def criar_perfil(sender, instance,created, **kwargs): #função para criar tipo automaticamente, garante q todo usuario tenha um tipo
+def criar_tipo(sender, instance,created, **kwargs): #função para criar tipo automaticamente, garante q todo usuario tenha um tipo
     if created:
         TipoUsuario.objects.create(User= instance)
 
@@ -28,8 +28,14 @@ class Prestador(models.Model):
     def __str__(self):
         return self.user.username
 
+@receiver(post_save, sender=Prestador)
+def criar_prestador(sender, instance, created, **kwargs):
+    if created:
+        if instance.tipo == 'prestador':
+            Prestador.objects.create(user=instance.user)
+
 class Servico(models.Model):
-    prestador = models.ForeignKey(Prestador, on_delete=models.CASCADE)
+    prestador = models.ForeignKey(Prestador, on_delete=models.CASCADE, related_name='servico')
     nome = models.CharField(max_length=50)
     descricao = models.TextField()
     duracao_minutos = models.IntegerField()
