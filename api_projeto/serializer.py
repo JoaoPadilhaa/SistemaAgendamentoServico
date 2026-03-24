@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from.models import Prestador, Servico, Agendamentos
+from.models import Prestador, Servico, Agendamentos, DisponibilidadedeHorario, TipoUsuario
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -8,29 +8,36 @@ class UserSerializer(serializers.ModelSerializer):
     tipo = serializers.CharField(write_only=True)
 
     class Meta:
-        model:User
-        fields = ['username', 'password', 'tipo']
+        model = User
+        fields = ['id','username', 'password', 'tipo']
     
     def create(self, validated_data):
         tipo = validated_data.pop('tipo')
-        user = validated_data.create.user(**validated_data)
+        user = User.objects.create_user(**validated_data)
 
-        user.tipousuario.tipo = tipo
-        user.tipousuario.save()
+        TipoUsuario.objects.create(user=user, tipo=tipo)
+        
+        if tipo.lower() == 'prestador':
+            Prestador.objects.create(user=user, nome=user.username)
         return user
     
 class ServicoSerializer(serializers.ModelSerializer):
     class Meta:
-        model: Servico
-        fields = '__all__'
+        model = Servico
+        fields = ['nome', 'descricao', 'duracao_minutos', 'preco', 'ativo']
 
 class PrestadorSerializer(serializers.ModelSerializer):
     servico = ServicoSerializer(many=True, read_only=True)
     class Meta:
-        model: Prestador
+        model = Prestador
         fields = '__all__'
 
 class AgendamentoSerializer(serializers.ModelSerializer):
     class Meta:
-        model: Agendamentos
+        model= Agendamentos
+        fields = '__all__'
+
+class DisponibilidadeHorarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model= DisponibilidadedeHorario
         fields = '__all__'
