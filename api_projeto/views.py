@@ -29,20 +29,3 @@ def create(request):
         })
     return Response(serializer.errors)
 
-# #@api_view(['POST'])
-# def login(request):
-#     username = request.data.get('username')
-#     password = request.data.get('password')
-
-#     user = authenticate(username=username, password=password)
-
-#     if user is not None:
-#         token, created = Token.objects.get_or_create(user=user)
-
-#         return Response({
-#             'token': token.key
-#         })
-#     return Response(
-#         {'error': 'Credenciais inválidas'},
-#         status=status.HTTP_401_unauthorized
-#     )

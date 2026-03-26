@@ -11,13 +11,13 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id','username', 'password', 'tipo']
     
-    def create(self, validated_data):
+    def create(self, validated_data): #valida e cria o usuario
         tipo = validated_data.pop('tipo')
         user = User.objects.create_user(**validated_data)
 
-        TipoUsuario.objects.create(user=user, tipo=tipo)
+        TipoUsuario.objects.create(user=user, tipo=tipo) # cria um tipousuario para o usuario
         
-        if tipo.lower() == 'prestador':
+        if tipo.lower() == 'prestador':# verifica se o usuario é prestador, se for é adicionado na tabela prestador e no grupo prestador
             grupo, _ = Group.objects.get_or_create(name='Prestador')
             Prestador.objects.create(user=user, nome=user.username)
             user.groups.add(grupo)
@@ -27,9 +27,14 @@ class UserSerializer(serializers.ModelSerializer):
         return user
     
 class ServicoSerializer(serializers.ModelSerializer):
+    nomeprestador= serializers.SerializerMethodField()
     class Meta:
         model = Servico
-        fields = ['nome', 'descricao', 'duracao_minutos', 'preco', 'ativo']
+        fields = ['nome', 'descricao', 'duracao_minutos', 'preco', 'ativo', 'nomeprestador']
+
+    def get_nomeprestador(self, obj): # retorna o nome do prestador de serviço, pois o prestador esta diretamente ligado a servico
+        return obj.prestador.nome
+
 
 class PrestadorSerializer(serializers.ModelSerializer):
     servico = ServicoSerializer(many=True, read_only=True)
