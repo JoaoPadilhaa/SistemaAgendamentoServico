@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from.models import Prestador, Servico, Agendamentos, DisponibilidadedeHorario, TipoUsuario
 
 
@@ -18,7 +18,12 @@ class UserSerializer(serializers.ModelSerializer):
         TipoUsuario.objects.create(user=user, tipo=tipo)
         
         if tipo.lower() == 'prestador':
+            grupo, _ = Group.objects.get_or_create(name='Prestador')
             Prestador.objects.create(user=user, nome=user.username)
+            user.groups.add(grupo)
+        else:
+            grupo, _ = Group.objects.get_or_create(name='Cliente')
+            user.groups.add(grupo)
         return user
     
 class ServicoSerializer(serializers.ModelSerializer):
