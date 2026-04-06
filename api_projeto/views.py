@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .serializer import UserSerializer, ServicoSerializer
-from .models import Servico, Prestador
+from .serializer import UserSerializer, ServicoSerializer, AgendamentoSerializer
+from .models import Servico, Prestador, Agendamentos
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.viewsets import ModelViewSet
@@ -16,6 +16,13 @@ class ServicoViewSet(ModelViewSet):
     def perform_create(self, serializer):
         prestador = Prestador.objects.get(user=self.request.user) #procura o prestador que pertene ao usuario logado
         serializer.save(prestador=prestador) #salva
+
+class AgendamentoViewSet(ModelViewSet):
+    queryset = Agendamentos.objects.all()
+    serializer_class = AgendamentoSerializer
+    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    def perform_create(self, serializer):
+        serializer.save(cliente=self.request.user, status= "pendente")
 
 @api_view(['POST'])
 def create(request):

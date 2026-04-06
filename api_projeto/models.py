@@ -66,7 +66,8 @@ class Agendamentos(models.Model):
             ('pendente', 'Pendente'),
             ('confirmado', 'Confirmado'),
             ('cancelado', 'Cancelado')
-        ]
+        ],
+        default= 'pendente'
     )
     criado_em = models.DateTimeField(auto_now_add=True)
 
