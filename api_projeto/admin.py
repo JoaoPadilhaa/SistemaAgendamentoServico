@@ -1,3 +1,4 @@
 from django.contrib import admin
+from .views import Agendamentos
 
-# Register your models here.
+admin.site.register(Agendamentos)

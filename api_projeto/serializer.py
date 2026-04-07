@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User, Group
 from.models import Prestador, Servico, Agendamentos, DisponibilidadedeHorario, TipoUsuario
 from rest_framework.validators import UniqueValidator
+from datetime import timedelta
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -14,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id','username','email', 'password', 'tipo']
     
+    #valida email unico
     def validate_email(self, value):
         email = value.lower()
 
@@ -56,16 +58,81 @@ class PrestadorSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class AgendamentoSerializer(serializers.ModelSerializer):
+    nomeservico= serializers.SerializerMethodField()
     cliente = serializers.CharField(read_only=True)
     status = serializers.ChoiceField(choices=[
         ('pendente', 'Pendente'),
         ('confirmado', 'Confirmado'),
         ('cancelado', 'Cancelado'),
     ], required=False)
-
+    servico = serializers.SlugRelatedField(
+        queryset=Servico.objects.all(),
+        slug_field='nome'
+    )
+    
     class Meta:
         model= Agendamentos
-        fields = ['cliente', 'servico', 'data_hora_inicio', 'data_hora_fim', 'status']
+        fields = ['cliente', 'servico', 'data_hora_inicio', 'data_hora_fim', 'status', 'nomeservico']
+        extra_kwargs = {
+            'data_hora_fim' : {'read_only': True}
+        }
+
+    #retorna o nome do serviço
+    def get_nomeservico(self, obj):
+       return obj.servico.nome
+    
+    #Valida o agendamento por completo
+    def validate(self, data):
+        user = self.context['request'].user
+
+        self.validar_permissioes_cliente(user, data)
+        
+       #pega a hora e servico ou em caso de patch, pega os valores que já estavam no banco
+        inicio = data.get('data_hora_inicio', getattr(self.instance, 'data_hora_inicio', None))
+        servico = data.get('servico', getattr(self.instance, 'servico', None))
+
+        #calculo da hora do fim, só calcula se for enviado os dois acima
+        if inicio and servico:
+            fim_calculado = inicio + timedelta(minutes=servico.duracao_minutos)
+            data['data_hora_fim'] = fim_calculado
+        else:
+            #se não for enviado, pega o fim que já estava no banco
+            fim_calculado = getattr(self.instance, 'data_hora_fim', None)
+
+        if fim_calculado:
+            if inicio > fim_calculado:
+                raise serializers.ValidationError('Erro: A hora de início deve ser anterior a hora de fim!')
+
+            #valida se são horários permitidos ao marcar
+            agendamentos = Agendamentos.objects.filter(
+                data_hora_inicio__lt=fim_calculado,
+                data_hora_fim__gt=inicio)
+            
+            if self.instance:
+                agendamentos = agendamentos.exclude(pk=self.instance.pk)
+            if agendamentos.exists():
+                raise serializers.ValidationError('Conflito de horário')
+        
+        return data
+    
+    #Função de ver se o usuario é cliente
+    def validar_permissioes_cliente(self, user, data):
+        is_cliente = user.groups.filter(name='Cliente').exists()
+        print(f'Chogou aq pai {is_cliente}')
+        if self.instance and is_cliente:
+            #pega o status do agendamento e pga o status novo
+            status_novo = data.get('status')
+            status_atual = self.instance.status
+
+            #verifica se o status novo é algo diferente de cancelado
+            if status_novo and status_novo != 'cancelado':
+                raise serializers.ValidationError('Clientes só podem alterar o status para Cancelado')
+            #verifica se o status não é pendente, se não for avisa que só pode alterar pendente para cancelado
+            if status_atual != 'pendente':
+                raise serializers.ValidationError('Apenas agendamenteos pendentes podem ser cancelados')
+            if 'data_hora_inicio' in data and data['data_hora_inicio'] != self.instance.data_hora_inicio:
+                raise serializers.ValidationError('Clientes não podem alterar o horário do agendamento.')
+            
 
 class DisponibilidadeHorarioSerializer(serializers.ModelSerializer):
     class Meta:
