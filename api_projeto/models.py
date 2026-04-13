@@ -16,15 +16,6 @@ class TipoUsuario(models.Model):#tipo de usuario criado
     def __str__(self):
         return self.user.username #retorna username
 
-# @receiver(post_save, sender=User)
-# def criar_tipo(sender, instance,created, **kwargs): #função para criar tipo automaticamente, garante q todo usuario tenha um tipo
-#     print('signal pau')
-#     if created:
-#         print('Usuario criado')
-#         if hasattr(instance, 'tipousuario'):
-#             if instance.tipousuario.tipo == 'prestador':
-#                 print("criando prestador")
-#                 TipoUsuario.objects.create(user= instance)
 
 class Prestador(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)# tabela de prestador que esta ligada ao usario

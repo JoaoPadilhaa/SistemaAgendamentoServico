@@ -37,8 +37,6 @@ class UserSerializer(serializers.ModelSerializer):
             grupo, _ = Group.objects.get_or_create(name='Cliente')
             user.groups.add(grupo)
         
-        
-
         return user
     
 class ServicoSerializer(serializers.ModelSerializer):
@@ -72,7 +70,7 @@ class AgendamentoSerializer(serializers.ModelSerializer):
     
     class Meta:
         model= Agendamentos
-        fields = ['cliente', 'servico', 'data_hora_inicio', 'data_hora_fim', 'status', 'nomeservico']
+        fields = ['id','cliente', 'servico', 'data_hora_inicio', 'data_hora_fim', 'status', 'nomeservico']
         extra_kwargs = {
             'data_hora_fim' : {'read_only': True}
         }
@@ -103,8 +101,11 @@ class AgendamentoSerializer(serializers.ModelSerializer):
             if inicio > fim_calculado:
                 raise serializers.ValidationError('Erro: A hora de início deve ser anterior a hora de fim!')
 
+            prestador_id = servico.prestador.id
+
             #valida se são horários permitidos ao marcar
             agendamentos = Agendamentos.objects.filter(
+                servico__prestador_id=prestador_id,
                 data_hora_inicio__lt=fim_calculado,
                 data_hora_fim__gt=inicio)
             
@@ -118,7 +119,6 @@ class AgendamentoSerializer(serializers.ModelSerializer):
     #Função de ver se o usuario é cliente
     def validar_permissioes_cliente(self, user, data):
         is_cliente = user.groups.filter(name='Cliente').exists()
-        print(f'Chogou aq pai {is_cliente}')
         if self.instance and is_cliente:
             #pega o status do agendamento e pga o status novo
             status_novo = data.get('status')
@@ -135,6 +135,11 @@ class AgendamentoSerializer(serializers.ModelSerializer):
             
 
 class DisponibilidadeHorarioSerializer(serializers.ModelSerializer):
+    nomeprestador = serializers.SerializerMethodField()
     class Meta:
         model= DisponibilidadedeHorario
-        fields = '__all__'
+        fields = ['nomeprestador','dia_semana', 'hora_inicio', 'hora_fim']
+
+    def get_nomeprestador(self, obj):
+        return obj.prestador.nome
+

@@ -1,12 +1,9 @@
 from rest_framework.decorators import api_view
-from rest_framework import status
-from .serializer import UserSerializer, ServicoSerializer, AgendamentoSerializer
-from .models import Servico, Prestador, Agendamentos
+from .serializer import UserSerializer, ServicoSerializer, AgendamentoSerializer, DisponibilidadeHorarioSerializer
+from .models import Servico, Prestador, Agendamentos, DisponibilidadedeHorario
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.viewsets import ModelViewSet
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions
 
 class ServicoViewSet(ModelViewSet):
@@ -24,6 +21,14 @@ class AgendamentoViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(cliente=self.request.user, status= "pendente")
 
+class DisponibilidadedeHorarioViewSet(ModelViewSet):
+    queryset= DisponibilidadedeHorario.objects.all()
+    serializer_class = DisponibilidadeHorarioSerializer
+    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    def perform_create(self, serializer):
+        prestador = Prestador.objects.get(user=self.request.user)
+        serializer.save(prestador=prestador)
+
 @api_view(['POST'])
 def create(request):
     serializer = UserSerializer(data=request.data)
@@ -34,5 +39,11 @@ def create(request):
             "user": serializer.data,
             "token": token.key
         })
-    return Response(serializer.errors)
+    return Response(serializer.errors, status=400)
 
+@api_view(['GET'])
+def listagemCancelados(request):
+    listaCancelada = Agendamentos.objects.filter(status='cancelado')
+    serializer = AgendamentoSerializer(listaCancelada, many=True)
+
+    return Response(serializer.data)
